@@ -10,14 +10,6 @@ output:
     self_contained: false
 ---
 
-```{r setup, include=FALSE}
-options(htmltools.dir.version = FALSE)
-knitr::opts_chunk$set(echo = TRUE,
-                      eval = TRUE,
-                      fig.retina = 3,
-                      message = FALSE,
-                      warning = FALSE)
-```
 
 ```{r}
 packages = c('DT','ggiraph','plotly','tidyverse', 'raster','sf','clock','tmap',
