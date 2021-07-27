@@ -1,5 +1,5 @@
 ---
-title: "Vast_Challenge_Part_1"
+title: "Vast Challenge Part 1"
 description: Welcome to Ong Chee Hong's Vast Challenge 2021 Assignment
 author:
   - name: Ong Chee Hong
