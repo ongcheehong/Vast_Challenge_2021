@@ -1,10 +1,10 @@
 ---
-title: "vast_challenge_part_3"
+title: "Vast Challenge Part 3"
 description: |
   A short description of the post.
 author:
-  - name: Nora Jones
-    url: https://example.com/norajones
+  - name: Ong Chee Hong
+    url: https://www.linkedin.com/in/alexongch/
 date: 07-27-2021
 output:
   distill::distill_article:
@@ -12,12 +12,600 @@ output:
 ---
 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+```{r}
+packages = c('DT','ggiraph','plotly','tidyverse', 'raster','sf','clock','tmap',
+             'rgdal','dplyr', 'tidyr', 'textclean', "plotly", "forcats", "jpeg", "tiff",
+             "mapview","tidygraph","igraph","ggraph","visNetwork","leaflet","lubridate")
+for(p in packages){
+  if(!require(p,character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+}
 ```
 
-Distill is a publication format for scientific and technical writing, native to the web.
+```{r}
+car <- read_csv("data/mc2/car-assignments.csv")
+cc <- read_csv("data/mc2/cc_data.csv", locale = locale(encoding = "ASCII"))
+gps <- read_csv("data/mc2/gps.csv")
+loyalty <- read_csv("data/mc2/loyalty_data.csv",locale = locale(encoding = "ASCII"))
+```
 
-Learn more about using Distill at <https://rstudio.github.io/distill>.
 
+# 2. Data preparation
+
+## 2.1 Customisation of code chunks
+
+First, we will customize the all code chunks using the below knitr code. More information on chunk options can be found [here](https://yihui.org/knitr/options/#animation)
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      fig.retina = 3,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+## 2.2 Installing required R packages
+
+Next, we will install the required R packages. There are three basic groups of packages that we will install,
+
+1) For data manipulation and preparation
+The [*tidyverse*](https://www.tidyverse.org/) package is a group of R packages including [*dplyr*](https://dplyr.tidyverse.org/), [*tidyr*](https://tidyr.tidyverse.org/) that assist user to manipulate data.
+
+2) Date and Time
+The two packages [*clock*](https://clock.r-lib.org/) and  [*lubridate*](https://lubridate.tidyverse.org/) are used for the manipulation of date and time data
+
+3) Interactive data analysis
+The two packages [*ggiraph*](https://cran.rstudio.com/web/packages/ggiraph/ggiraph.pdf) and [*plotly*](https://plotly.com/r/) are used to output data into interactive graphical/chart form for analysis.
+
+4) GeoVisual Analysis
+The packages [*raster*](https://cran.r-project.org/web/packages/raster/raster.pdf), [*sf*](https://r-spatial.github.io/sf/),[*tmap*](https://cran.r-project.org/web/packages/tmap/vignettes/tmap-getstarted.html) and [*rgdal*](https://cran.r-project.org/web/packages/rgdal/index.html) are used for geospatial visual analytics where data are output to a map for analysis such as movement of people etc.
+
+5) Network Analysis
+Lastly, to analyse the relationship between people etc. We will use the packages from [*tidygraph*](https://www.data-imaginist.com/2017/introducing-tidygraph/), [*igraph*](https://igraph.org/), [*ggraph*](https://www.data-imaginist.com/2017/ggraph-introduction-layouts/) and [*visNetwork*](https://datastorm-open.github.io/visNetwork/#:~:text=visNetwork%20is%20an%20R%20package,%2Fdatastorm%2Dopen%2FvisNetwork.). *visNetwork* is a package to output interactive network analysis. 
+
+```{r}
+packages = c('DT','ggiraph','plotly','tidyverse', 'raster','sf','clock','tmap',
+             'rgdal','dplyr', 'tidyr', 'textclean', "plotly", "forcats", "jpeg", "tiff",
+             "mapview","tidygraph","igraph","ggraph","visNetwork","leaflet","lubridate")
+for(p in packages){
+  if(!require(p,character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+}
+```
+
+## 2.3 Provided data and information
+There are 3 different types of data & information provided. A *geospatial dataset*, *csv files* and a *jpg file* consisting of the Abila tourist map.
+
+Below is the information of all the data provided.
+
+### 2.3.1. A csv file on vehicle assignments to employee (car-assignments.csv)
+
+1) Employee Last Name
+
+2) Employee First Name
+
+3) Car ID (integer)
+
+4) Current Employment Type (Department; categorical)
+
+5) Current Employment Title (job title; categorical)
+
+### 2.3.2.	A CSV file of vehicle tracking data (gps.csv)
+
+3.1	Timestamp
+
+3.2	Car ID (integer)
+
+3.3	Latitude
+
+3.4	Longitude
+
+### 2.3.3.	A CSV file containing loyalty card transaction data (loyalty_data.csv)
+
+4.1	Timestamp
+
+4.2	Location (name of the business)
+
+4.3	Price (real)
+
+4.4	Loyalty Number (A 5-character code starting with L that is unique for each card)
+
+
+### 2.3.4.	A CSV file containing credit and debit card transaction data (cc_data.csv)
+
+5.1	Timestamp
+
+5.2	Location (name of the business)
+
+5.3	Price (real)
+
+5.4	Last 4 digits of the credit or debit card number
+
+### 2.3.5.	ESRI shapefiles of Abila (in the Geospatial folder)
+
+### 2.3.6.	A tourist map of Abila with locations of interest identified, in JPEG format (MC2-Tourist.jpg)
+
+
+
+
+
+
+
+
+
+## 2.4. Importing of data
+
+We will import the 4 different *csv* datasets that were provided
+
+
+```{r}
+car <- read_csv("data/mc2/car-assignments.csv")
+cc <- read_csv("data/mc2/cc_data.csv")
+gps <- read_csv("data/mc2/gps.csv")
+loyalty <- read_csv("data/mc2/loyalty_data.csv")
+```
+
+If we take a look at the above datasets in excel, we will see that there are foreign characters in some of the datasets provided. An example is the Katerina's Cafe as shown below. To address this, we will need to encode the dataset to allow rstudio to read properly. 
+
+![](img/katerine.png)
+
+To allow use to know the encoding type for both cc and loyalty dataset. Guess encoding will be used to detect the encoding type as shown below..
+
+
+
+```{r}
+guess_encoding(cc)
+guess_encoding(loyalty)
+```
+
+Next, we will add the code locale = locale(encoding = "ASCII" on both cc and loyalty dataset)
+
+
+```{r}
+car <- read_csv("data/mc2/car-assignments.csv")
+cc <- read_csv("data/mc2/cc_data.csv", locale = locale(encoding = "ASCII"))
+gps <- read_csv("data/mc2/gps.csv")
+loyalty <- read_csv("data/mc2/loyalty_data.csv",locale = locale(encoding = "ASCII"))
+```
+
+## 2.5. Data examination
+
+First, we will look at both cc and loyalty card dataset by using the *glimpse* function as shown below. There are 1490 rows and 1392 rows in both the cc and loyatly dataset respectfully. If we take look closely, we will see that these two datasets are closely linked by location, price and timestamp except the last4ccnum and loyaltynum are different. 
+
+If we take a look back at the MC2 background, we will observe that Kronos based companies are allowed to collect credit card and loyalty cards information on GAStech employees purchases as such these two datasets are similar in nature. 
+
+However, the rows for both cc and loyalty card data are different. This anomaly might have a few reasoning, 1) the employees did not used their credit cards while doing purchases but loyalty card was presented. 2) Vice versa, employees might also used their credit card but did not present their loyalty card during purchases.
+
+
+
+```{r}
+glimpse(cc)
+glimpse(loyalty)
+```
+
+Next, we will look at the vehicle datasets. The 44 rows car datasets are represented by the employee, employment information with their car assignment ID.
+
+The gps datasets are based on the car movements in respect to their lat and long position with timestamp.
+
+
+```{r}
+glimpse(car)
+glimpse(gps)
+
+```
+
+## 2.6. Data Preparation
+
+### 2.6.1 CC and Loyalty dataset
+
+We will prepare the cc and loyalty datasets for data exploration later.
+
+### 2.6.1.1. Changing the datatypes of last4ccnum & loyaltynum
+
+The last4ccnum of the cc datasets and the loyaltynum of the loyalty dataset should be a categorical data type. As such, we will change it by using the *as.factor* function. 
+
+
+```{r}
+cc$last4ccnum <- as.factor(cc$last4ccnum)
+loyalty$loyaltynum <- as.factor(loyalty$loyaltynum)
+```
+
+Next, we will modify the datatype for both the timestamp of cc and loyalty dataset using the *clock* package. If we observe below, the data_time_parse function is use to change the timestamp to *dttm* (datetime) format while the date_parse function is used to change the data to *date* format.
+
+
+```{r}
+cc$timestamp <- date_time_parse(cc$timestamp,
+                                 zone = "",
+                                 format = "%m/%d/%Y %H:%M")
+
+loyalty$timestamp <- date_parse(loyalty$timestamp,
+                                 format = "%m/%d/%Y")
+
+```
+
+
+We will double check the dataset to confirm that the datatype has been changed to the one we wanted.
+
+
+```{r}
+glimpse(cc)
+glimpse(loyalty)
+
+```
+
+### 2.6.1.2 Splitting the timestamp data into individual date, time and day columns.
+
+To allow us to dive deeper into our analysis later, we will split the timestamp dataset into date, time and day columns. We will first add more columns by using the *mutate* function from dplyr to add day, date and time columns in the cc dataset and importing in to the *cc_dtsplit* object.
+
+There is no need to add columns for the loyatly dataset as we will join both the datasets together in which day will be included in the joined dataset.
+
+```{r}
+cc_dtsplit <- cc %>%
+  mutate(day = date_weekday_factor(cc$timestamp), date =  as_date(cc$timestamp), time = format(cc$timestamp, format = "%H:%M"))
+
+cc_dtsplit
+
+```
+
+To allow us to join both datasets together, we will need to rename the timestamp column from the loyatly dataset to *date* so that both the date columns have the same name.
+
+
+```{r}
+loyalty_dt <- rename(loyalty, date = timestamp)
+
+```
+
+We will take a look at our newly cleaned datasets to double check the changed we have made previously.
+
+
+```{r}
+glimpse(cc_dtsplit)
+glimpse(loyalty_dt)
+
+```
+
+### 2.6.1.3. Changing the datatypes of car & gps
+
+First, we will take a look at the car & gps datasets. Notice that the CarID and id for both datasets are not of the correct categorical datatype. We will proceed to change both the two columns.
+
+
+```{r}
+glimpse(car)
+glimpse(gps)
+
+```
+Changing of CarID and ID to categorical data.
+
+
+```{r}
+car$CarID = as.factor(car$CarID)
+gps$id = as.factor(gps$id)
+
+```
+
+### 2.6.1.4. Combining both first and last name.
+ 
+Next, we will combine both first and last name of the car datasets into one column for us to analyse the person easily. We will use the *tidyr* function unite to unify both the first and last name into *name*.
+
+
+```{r}
+car_unite <- car %>%
+  unite(col = "name", LastName,FirstName, sep = ", ",  remove =FALSE) 
+
+```
+
+
+### 2.6.1.5. Change datatype of time and rename id to Carid
+
+Next, we will rename the id of gps to CarID to match with the car_unite data. Additionally, the Timestamp data of gps will be changed to the dttm format
+
+
+```{r}
+gps_cleaned <- rename(gps,CarID = id)
+
+gps_cleaned$Timestamp <- date_time_parse(gps_cleaned$Timestamp,
+                                 zone = "",
+                                 format = "%m/%d/%Y %H:%M")
+
+```
+
+Lastly, we will look at our cleaned dataset and we have done cleaning the data.
+
+
+```{r}
+glimpse(car_unite)
+glimpse(gps_cleaned)
+
+```
+
+# 4. Answers
+
+### 4.1.  Using just the credit and loyalty card data, identify the most popular locations, and when they are popular. What anomalies do you see? What corrections would you recommend to correct these anomalies? Please limit your answer to 8 images and 300 words.
+
+
+
+As shown previosuly in our data preparation segment, there is a difference in rows (difference of 98 rows) between the cc and loyalty card data. This shows an anomaly that one of the cards were used but not both during purchases which might results in a difference in number of entries.
+
+
+```{r}
+
+glimpse(cc_dtsplit)
+glimpse(loyalty_dt)
+```
+
+As explained previously, the cc and loyalty dataset are similar in nature with just an exception of the last4ccnum and loyaltynum, therefore, a join is required to match rows where the users uses both cc and loyalty card data. However, before a join is performed, we will analyse both the cc and loyalty dataset based on location counts.
+
+
+A first exploratory data analysis by using a bar chart is performed on the cc_dtsplit dataset to find out the location which were patronize the most. 
+
+Based on the bar chart below, we are able to observe that there are 4 locations that are siginificantly higher in visitors than the rest of the locations. The highest is Katerina's cafe with a total of 212 visits followed by Hippokampos, Guys'Gyros and Brew's been served. These four places excluding Hippokampos which is not determinable in the map provided are all restaurants/bars.
+
+
+```{r}
+cc_dtsplit_bar <- cc_dtsplit %>%
+  count(location) %>%
+  mutate(location = fct_reorder(location, n, .desc =TRUE)) %>%
+  plot_ly(x = ~location, y = ~n, marker = list(color = ~n)) %>%
+  add_bars() %>%
+  layout(title = "Total number of visitation by location", xaxis = list(title = ""),yaxis = list(title = "Number of visitors"))
+
+cc_dtsplit_bar
+```
+
+
+
+Next, we will take a look at the loyalty_dt dataset.
+
+Based on the bar chart below, we are able to observe that the 4 locations that were visited mostly are the same four locations that was shown on the cc_dtsplit dataset.
+
+One difference is that *Ouzeri Elian* jumps to the fifth spot which differs from the cc_dtsplit dataset where *Ouzeri Elian* is in the sixth spot.
+
+
+```{r}
+loyalty_dt_bar <- loyalty_dt %>%
+  count(location) %>%
+  mutate(location = fct_reorder(location, n, .desc =TRUE)) %>%
+  plot_ly(x = ~location, y = ~n, marker = list(color = ~n)) %>%
+  add_bars() %>%
+  layout(title = "Total number of visitation by ", xaxis = list(title = ""),yaxis = list(title = "Number of visitors"))
+
+loyalty_dt_bar
+```
+
+
+Next, an inner join will be conducted by joining date, location and price and will will output into a new object *cc_loyalty_join*.
+
+Notice that there are only 1,087 rows wheareas both cc_dtsplit and loyalty_dt has 1490 and 1392 rows respectfully. These shows that some of the data in cc does not match the loyalty data which strengthens the initial anomaly that some of the employees uses one of each card but not both during purchases.
+
+
+```{r}
+cc_loyalty_join <- cc_dtsplit %>%
+  inner_join(loyalty_dt, by = c("date","location", "price"))
+
+cc_loyalty_join
+```
+
+
+### 4.2.	Add the vehicle data to your analysis of the credit and loyalty card data. How does your assessment of the anomalies in question 1 change based on this new data? What discrepancies between vehicle, credit, and loyalty card data do you find? Please limit your answer to 8 images and 500 words.
+
+
+
+We will examine the two vehicle related data. Gps and car-assignments data.
+
+The car-assignment data with a total of 44 rows consists of the name and appointment of the employee tag to a CarID. 
+
+The GPS data with a total of 685169 rows consists of the id of the car and its movement based on latitude and longitude with timestamp.
+
+
+```{r}
+glimpse(car_unite)
+glimpse(gps_cleaned)
+```
+
+
+In order for us to match the car assignment person to the gps data. We will inner join the data.
+
+Notice that there is only a total of 613077 dataset. This shows that some of the vehicles recorded are not part of the car_assignment data. I.e. vehicles apart from the car assignees has been tracked too. This phenomena wil be explained in the next section.
+
+
+```{r}
+
+
+gps_car <- gps_cleaned %>%
+  inner_join(car_unite, by = "CarID") 
+
+
+gps_car
+
+```
+
+The car_unite dataset which consists of car assigned to GASTech employees and also truck drivers which have no CarID.
+
+
+```{r}
+DT::datatable(car_unite)
+
+```
+Comparing the above car_unite DT table with the below gps_cleaned table, you will observe that there are vehicle IDs of 101-107. Those are assume to be trucks.
+
+
+```{r}
+DT::datatable(gps_cleaned)
+
+```
+
+
+If we look at the above data, we can see that during one minute, the gps data varies a lot. This tell us that during one minute, the car moves around quite a fair bit.
+
+
+Next, we will anti join both the car and gps datasets to sieve out those vehicle movement that are not part of the car assignees data.
+
+The below dataset will clearly show those CarID of 101-107 which are assume to be trucks.
+
+Going back to the background of this assignment. We will observe that GAStech do provide trucks for official business use. As such, we will assume that those vehicle with CarID of 101 to 107 are trucks. 
+
+These trucks will later be used for examination to see if they were used for personal used.
+
+```{r}
+gps_car_anti <- gps_cleaned %>%
+  anti_join(car_unite, by = "CarID")
+
+gps_car_anti
+```
+
+
+We will revisit the cc_loyalty dataset
+
+
+```{r}
+cc_loyalty_join %>%
+  arrange(timestamp)
+```
+
+
+If we take a look at both the joined dataset of gps_car and cc_loyalty_join data, we will observe that the gps_car data starts at 2014-01-06, 06:28 while the cc_loyalty_join starts at 2014_01_06, 07:28. A difference of an hour. We will observe the 1 hr difference in the later part of our study.
+
+
+
+```{r}
+tail(gps_car,6)
+
+
+```
+
+Next, we will take a look at the last few rows of both joined dataset. We will see that the gps data ends at 2014-01-19, 20:56:00 while the cc_loyalty data stops at 2014-01-19, 20:51:00. There is a difference of 6 mins.
+
+
+```{r}
+tail(cc_loyalty_join, 6)
+
+```
+
+Now, we will filter out those data before 2014-01-06 07:28:00 to take a look at the CarID. First will filter out those data that are before 07:00:00 so that when we plot the bar chart later, it will be visible
+
+
+```{r}
+gps_car_filter <- gps_car %>%
+  filter(Timestamp < "2014-01-06 07:00:00")
+
+gps_car_filter
+```
+
+First, we will group the data by TimeStamp and CarID.
+
+
+```{r}
+gps_car_group <- gps_car_filter %>%
+  group_by(Timestamp, CarID) %>%
+  summarize(count = n()) %>%
+  ungroup() 
+```
+
+Based on the bar chart below, there are 4 CarIDs recorded before 2014-01-06, 07:00:00. The 4 CarIDs are 4,10,19,35 with higher movements from 4 and 35.
+
+```{r}
+gps_car_group %>%
+  plot_ly(x = ~Timestamp, y = ~count, color = ~CarID, hoverinfo = "text",
+          text = ~paste("CarID:", CarID, "<br>","Timestamp:", Timestamp, "<br>", "Count:", count)) %>%
+  add_bars %>%
+  layout(xaxis = list(title  = ""))
+
+```
+
+Next, we will filter out 07:00:00 - 07:12:00.
+```{r}
+gps_car_filter2 <- gps_car %>%
+  filter(Timestamp > "2014-01-06 07:00:00" & Timestamp <= "2014-01-06 07:12:00")
+
+gps_car_filter2
+```
+
+
+```{r}
+gps_car_group2 <- gps_car_filter2 %>%
+  group_by(Timestamp, CarID) %>%
+  summarize(count = n()) %>%
+  ungroup() 
+```
+
+From 07:05:00 to 07:12:00, we can see that 35 has been moving about a lot, together with the earlier recorded movement. 35 who is an executive of GASTEch moves the most. Followed by 7 and 10 which has high amount of movement per minute but only travelled for around 5 mins.
+
+```{r}
+gps_car_group2 %>%
+  plot_ly(x = ~Timestamp, y = ~count, color = ~CarID, hoverinfo = "text",
+          text = ~paste("CarID:", CarID, "<br>","Timestamp:", Timestamp, "<br>", "Count:", count)) %>%
+  add_bars %>%
+  layout(xaxis = list(title  = ""))
+
+
+```
+
+Next, we will filter for 07:12:00 to 07:28:00
+
+
+```{r}
+gps_car_filter3 <- gps_car %>%
+  filter(Timestamp > "2014-01-06 07:12:00" & Timestamp < "2014-01-06 07:28:00")
+
+gps_car_filter3
+```
+
+
+
+```{r}
+gps_car_group3 <- gps_car_filter3 %>%
+  group_by(Timestamp, CarID) %>%
+  summarize(count = n()) %>%
+  ungroup() 
+```
+Similar as before, 35 is still moving about out till 07:27:00 with the highest movement count per minute. 
+
+```{r}
+gps_car_group3 %>%
+  plot_ly(x = ~Timestamp, y = ~count, color = ~as.factor(CarID), hoverinfo = "text",
+          text = ~paste("CarID:", CarID, "<br>","Timestamp:", Timestamp, "<br>", "Count:", count)) %>%
+  add_bars %>%
+  layout(xaxis = list(title  = ""))
+
+
+```
+
+Next, we will examine the last 6 min of the gps dataset
+
+
+```{r}
+gps_car_filter4 <- gps_car %>%
+  filter(Timestamp > "2014-01-19 20:51:00")
+gps_car_filter4
+```
+
+We will see that CarID 30 is the last recorded before the data ceased recording. CarID 30 belongs to the GASTech security manager. 
+
+
+```{r}
+gps_car_group4 <- gps_car_filter4 %>%
+  group_by(Timestamp, CarID) %>%
+  summarize(count = n()) %>%
+  ungroup() 
+
+gps_car_group4
+```
+
+
+```{r}
+cc_gps <- cc_loyalty_join %>%
+  inner_join(gps_car, by = c("timestamp" = "Timestamp"))
+
+cc_gps
+
+```
+
+Notice that when we joined both dataset, we can find several discrepancies in the data, First, at each moment the last4ccnum and loyaltynum is the same. However, the CarID is different. The reason to this is because we simply join the vehicle and purchases dataset by the time stamp. This is wrong as there might be occasion where at the same moment, one person could be moving about but not purchasing anything while the other could be at a shop buying stuff.
+
+
+To resolve this discrepancies. We will need to make use of the map data to find out the actual places based on the lat long data provided. Thus, we will proceed to Question 3.
 
